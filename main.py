@@ -10,7 +10,7 @@ from requests import post, get
 from flask import Flask, redirect, request, jsonify, session
 
 app = Flask(__name__)
-app.secret_key = "a4f8c2d9e1b6f7a2d8c3e4b1a7f9d0e5c6b8a1f2e3d7c4b9a0e6d5f3c2b1a8d7"
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
@@ -102,7 +102,6 @@ def get_playlists():
         headers=get_auth_header(session["access_token"]),
         timeout=30,
     )
-    print(type(response))
     playlists = response.json()
     return playlists
 
