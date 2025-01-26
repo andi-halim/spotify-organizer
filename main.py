@@ -5,6 +5,7 @@ Primary file tp run the Flask app.
 import os
 import urllib.parse
 from datetime import datetime
+import json
 
 from requests import post, get
 from flask import Flask, redirect, request, jsonify, session
@@ -66,7 +67,7 @@ def callback():
             "client_secret": CLIENT_SECRET,
         }
 
-        response = post(TOKEN_URL, data=req_body, timeout=30)
+        response = post(TOKEN_URL, data=req_body, timeout=10)
         token_info = response.json()
         session["access_token"] = token_info["access_token"]
         session["refresh_token"] = token_info["refresh_token"]
@@ -98,11 +99,28 @@ def get_playlists():
         return redirect("/refresh-token")
 
     response = get(
-        API_BASE_URL + "me/playlists",
+        API_BASE_URL + f"me/playlists",
         headers=get_auth_header(session["access_token"]),
-        timeout=30,
+        timeout=10,
     )
     playlists = response.json()
+
+    while playlists['next']:
+        response = get(
+            playlists['next'],
+            headers=get_auth_header(session["access_token"]),
+            timeout=10,
+        )
+        next_playlists = response.json()
+        playlists['items'] += next_playlists['items']
+        playlists['previous'], playlists['href'] = next_playlists['previous'], next_playlists['href']
+        playlists['next'] = next_playlists['next']
+
+    print(f"{len(playlists['items'])} playlists found!")
+
+    with open("playground/my_playlists.json", "w", encoding="utf8") as f:
+        json.dump(playlists, f, indent=4)
+
     return playlists
 
 
@@ -125,7 +143,7 @@ def refresh():
             "client_secret": CLIENT_SECRET,
         }
 
-        response = post(TOKEN_URL, data=req_body, timeout=30)
+        response = post(TOKEN_URL, data=req_body, timeout=10)
         new_token_info = response.json()
 
         session["access_token"] = new_token_info["access_token"]
